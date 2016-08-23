@@ -1,0 +1,12 @@
+scanner-rpm-verify
+==================
+
+
+Atomic Scanner for verifying installed RPM packages.
+
+To run:
+
+```
+$ sudo atomic install registry.centos.org/nshaikh/scanner-rpm-verify
+$ sudo atomic scan --scanner registry.centos.org/nshaikh/scanner-rpm-verify <image-to-be-processed>
+```
