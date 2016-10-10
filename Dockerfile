@@ -1,4 +1,4 @@
-FROM docker.io/centos:latest
+FROM registry.centos.org/centos/centos:latest
 
 LABEL INSTALL='docker run -ti --rm --privileged -v /etc/atomic.d/:/host/etc/atomic.d/ $IMAGE sh /install.sh'
 
