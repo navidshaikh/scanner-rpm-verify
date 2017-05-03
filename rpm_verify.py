@@ -1,10 +1,14 @@
+# Main scanner execution python module
+
 import json
 import os
 import re
-import sys
 
 from datetime import datetime
 from subprocess import Popen, PIPE
+from rpm_verify_constants import \
+    FILTER_DIRS, \
+    FILTER_PATHS
 
 
 # variables based on the `atomic scan` defaults
@@ -91,6 +95,23 @@ class RPMVerify(object):
         else:
             return out.split("\n")[0]
 
+    def filter_expected_dirs_modifications(self, filepath):
+        """
+        This method filters the expected modifications to directories like
+        /var,/run,/media,/mnt,/tmp
+        """
+
+        return filepath.startswith(tuple(FILTER_DIRS))
+
+    def filter_paths_with_known_issues(self, filepath):
+        """
+        this method filters the paths which should be filtered from the result
+        of scanner since the paths are issues in base image or resulting image
+        which are being fixed.
+        """
+
+        return filepath in FILTER_PATHS
+
     def process_cmd_output_data(self, data):
         """
         Process the command output data
@@ -107,14 +128,26 @@ class RPMVerify(object):
             if not match:
                 continue
 
+            # do not include the config files in the result
             # filter the config files
             if match.groups()[1] == 'c':
                 continue
 
-            filepath = match.groups()[2]
+            # filter the documentation files
+            if match.groups()[1] == 'd':
+                continue
+
+            filepath = match.groups()[2].strip()
+
+            # filter the expected directories
+            if self.filter_expected_dirs_modifications(filepath):
+                continue
+
+            # filter known paths having issues in base image or resulting image
+            if self.filter_paths_with_known_issues(filepath):
+                continue
+
             rpm = self.source_rpm_of_file(filepath)
-            rpm_meta = self.get_meta_of_rpm(rpm)
-            # do not include the config files in the result
 
             result.append({
                 "issue": match.groups()[0],
@@ -159,8 +192,8 @@ class Scanner(object):
         """
         Returns the containers / images to be processed
         """
-        # atomic scan will mount container's image onto a rootfs and expose rootfs to
-        # scanner under the /scanin directory
+        # atomic scan will mount container's image onto
+        # a rootfs and expose rootfs to scanner under the /scanin directory
         return [_dir for _dir in os.listdir(INDIR) if
                 os.path.isdir(os.path.join(INDIR, _dir))
                 ]
